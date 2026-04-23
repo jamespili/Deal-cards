@@ -1,197 +1,950 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>系统任务</title>
-    <style>
-        :root { --ios-red: #ff3b30; --ios-green: #34c759; --bg-color: #000; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: white; overflow: hidden; }
-        
-        /* 顶部选项区 - 保持不动 */
-        #top-panel { padding: 15px; background: #1c1c1e; border-bottom: 1px solid #333; }
-        .mode-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-        .mode-btn { background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
-        .mode-btn.active { background: #007aff; border-color: #007aff; }
-        #script-body { font-size: 0.85rem; line-height: 1.4; color: #ccc; }
-        .highlight { color: #ffbc05; font-weight: bold; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>亲戚长辈防破防太极拳发牌机</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap');
 
-        /* 主控区 */
-        #setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60%; text-align: center; }
-        .rescue-btn { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(135deg, #ff4b2b, #ff416c); border: none; color: white; font-size: 1.2rem; font-weight: bold; }
-        #timer { margin-top: 20px; color: #888; font-family: monospace; }
+  :root {
+    --bg-dark: #2a1a0e;
+    --paper: #f5e6c8;
+    --paper-dark: #e8d4a8;
+    --red: #c0392b;
+    --gold: #d4a017;
+    --gold-light: #f0c040;
+    --green-card: #2d5a27;
+    --blue-card: #1a3a5c;
+    --text-dark: #1a0f00;
+    --text-mid: #3d2410;
+    --border-gold: #b8860b;
+    /* fluid font base: scales from 14px @320px to 16px @480px */
+    --fs-base: clamp(13px, 3.5vw, 15px);
+  }
 
-        /* 通用全屏遮罩 */
-        .full-screen { position: fixed; top:0; left:0; width:100%; height:100%; z-index: 100; display: none; flex-direction: column; align-items: center; box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* [界面一] iPhone 来电界面 */
-        #call-screen { background: linear-gradient(to bottom, #2c3e50, #000); justify-content: space-between; padding: 80px 0 100px 0; }
-        
-        /* [界面二] iPhone 通话中界面 (核心重做) */
-        #incall-screen { background: #1a1a1a; justify-content: space-between; padding: 60px 0 80px 0; }
-        .incall-timer { color: #fff; font-size: 1.1rem; opacity: 0.9; margin-top: 8px; font-variant-numeric: tabular-nums; }
-        
-        /* iPhone 标志性 3x2 按钮矩阵 */
-        .incall-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; padding: 0 45px; width: 100%; box-sizing: border-box; margin-top: 20px; }
-        .grid-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .icon-circle { 
-            width: 72px; height: 72px; border-radius: 50%; 
-            background: rgba(255,255,255,0.12); 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.4rem; backdrop-filter: blur(10px);
-        }
-        .grid-item span { font-size: 0.75rem; color: #fff; opacity: 0.9; }
+  html { font-size: var(--fs-base); }
 
-        /* 顶部联系人信息 */
-        .caller-info { text-align: center; }
-        .caller-info h2 { font-size: 2.2rem; margin: 0; font-weight: 400; letter-spacing: -1px; }
-        .caller-info p { color: #ccc; margin-top: 10px; font-size: 1.1rem; }
+  body {
+    font-family: 'Noto Serif SC', serif;
+    background-color: var(--bg-dark);
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(180,80,20,.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(180,80,20,.10) 0%, transparent 60%),
+      repeating-linear-gradient(45deg, transparent, transparent 20px,
+        rgba(255,255,255,.015) 20px, rgba(255,255,255,.015) 21px);
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    /* safe area padding for notched phones */
+    padding: max(12px, env(safe-area-inset-top))
+             max(12px, env(safe-area-inset-right))
+             max(16px, env(safe-area-inset-bottom))
+             max(12px, env(safe-area-inset-left));
+    -webkit-tap-highlight-color: transparent;
+  }
 
-        /* 底部操作 */
-        .call-ui-bottom { width: 100%; display: flex; justify-content: space-around; }
-        .btn-circle { width: 78px; height: 78px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; }
-        .decline { background: var(--ios-red); }
-        .accept { background: var(--ios-green); }
-        .hangup { background: var(--ios-red); margin-top: 30px; } /* 挂断按钮 */
+  .app {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 2.5vw, 14px);
+  }
 
-        /* 微信/iPhone 辅助文字 */
-        .sub-text { font-size: 0.8rem; margin-top: 10px; text-align: center; color: #fff; opacity: 0.8; }
-    </style>
+  /* ── Side banner – hide on very narrow screens ── */
+  .side-banner {
+    display: none; /* hidden on mobile to save space */
+  }
+
+  /* ── Top nav ── */
+  .top-nav {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    z-index: 1;
+  }
+  .nav-btn {
+    background: var(--paper);
+    border: 2px solid var(--border-gold);
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    font-size: 0.73rem;
+    color: var(--text-dark);
+    font-family: inherit;
+    box-shadow: 2px 2px 0 rgba(0,0,0,.3);
+    transition: transform .1s;
+    /* bigger tap target */
+    min-width: 52px;
+    min-height: 48px;
+    justify-content: center;
+  }
+  .nav-btn:active { transform: scale(.95); }
+  .nav-btn .icon { font-size: 1.2rem; }
+
+  /* ── Header ── */
+  .header {
+    background: radial-gradient(ellipse at top, #fff6e0 0%, #f0d898 100%);
+    border-radius: 12px;
+    padding: clamp(12px, 4vw, 20px) clamp(10px, 3vw, 16px) clamp(10px, 3vw, 16px);
+    text-align: center;
+    border: 3px solid var(--border-gold);
+    box-shadow: 0 4px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.3);
+    overflow: hidden;
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 30px,
+      rgba(180,130,60,.06) 30px, rgba(180,130,60,.06) 31px);
+    pointer-events: none;
+  }
+
+  .header-chars {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    margin-bottom: 6px;
+  }
+  .char-img {
+    font-size: clamp(44px, 12vw, 64px);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .header-title { position: relative; z-index: 1; }
+  .title-main {
+    font-size: clamp(18px, 5.5vw, 26px);
+    font-weight: 900;
+    line-height: 1.25;
+    letter-spacing: 1px;
+  }
+  .title-main .highlight { color: var(--red); text-shadow: 1px 1px 0 rgba(0,0,0,.2); }
+  .title-main .normal    { color: var(--text-dark); }
+  .title-sub {
+    margin-top: 6px;
+    font-size: clamp(10px, 2.8vw, 13px);
+    color: #777;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Panel (attack cards wrapper) ── */
+  .panel {
+    background: var(--paper);
+    border-radius: 10px;
+    border: 2px solid var(--border-gold);
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,.3);
+  }
+  .panel-header {
+    background: linear-gradient(135deg, var(--paper-dark), var(--paper));
+    border-bottom: 2px solid var(--border-gold);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-size: clamp(12px, 3.2vw, 15px);
+    font-weight: 700;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .arrow-deco { color: var(--gold); font-size: .8em; }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1.5px solid var(--border-gold);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: clamp(11px, 2.8vw, 13px);
+    color: var(--text-mid);
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background .2s;
+    min-height: 36px;
+  }
+  .refresh-btn:active { background: var(--paper-dark); }
+
+  /* ── Attack cards horizontal scroll ── */
+  .attack-cards {
+    padding: 10px;
+    display: flex;
+    gap: clamp(6px, 2vw, 10px);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .attack-cards::-webkit-scrollbar { display: none; }
+
+  .attack-card {
+    flex: 0 0 clamp(68px, 18vw, 88px);
+    scroll-snap-align: start;
+    background: var(--paper-dark);
+    border: 2px solid var(--border-gold);
+    border-radius: 8px;
+    padding: 8px 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    position: relative;
+    /* slightly bigger touch area via min-height */
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .attack-card:active { transform: scale(.96); }
+  .attack-card.active {
+    border-color: var(--red);
+    background: #fff5f5;
+    box-shadow: 0 0 0 2px rgba(192,57,43,.3), 0 4px 12px rgba(0,0,0,.2);
+    transform: translateY(-3px);
+  }
+  .attack-card.active::before {
+    content: '!?';
+    position: absolute;
+    top: -10px; left: -8px;
+    background: var(--red);
+    color: white;
+    font-size: 10px;
+    font-weight: 900;
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 1px 1px 4px rgba(0,0,0,.3);
+  }
+  .card-icon {
+    width: clamp(32px, 8.5vw, 42px);
+    height: clamp(32px, 8.5vw, 42px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(16px, 4.5vw, 22px);
+    flex-shrink: 0;
+  }
+  .icon-red    { background: var(--red); }
+  .icon-purple { background: #7b2d8b; }
+  .icon-blue   { background: #1a5276; }
+  .icon-orange { background: #d35400; }
+  .icon-teal   { background: #1a7a5e; }
+
+  .card-name {
+    font-size: clamp(10px, 2.8vw, 13px);
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .card-desc {
+    font-size: clamp(8px, 2vw, 10px);
+    color: #666;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ── Response section ── */
+  .response-section {
+    background: linear-gradient(135deg, #2a1a0e, #3d2410);
+    border-radius: 10px;
+    border: 2px solid var(--border-gold);
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  }
+  .response-header {
+    padding: 9px 12px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(212,160,23,.3);
+  }
+  .response-title {
+    font-size: clamp(12px, 3.2vw, 15px);
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 1px;
+  }
+  .yin-yang { font-size: 1.1rem; }
+
+  /* ── 3-column response cards ── */
+  .response-cards {
+    padding: clamp(8px, 2.5vw, 12px);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(6px, 2vw, 10px);
+  }
+
+  .response-card {
+    border-radius: 10px;
+    padding: clamp(8px, 2.5vw, 14px) clamp(6px, 2vw, 10px) clamp(8px, 2.5vw, 12px);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: transform .2s;
+    /* fluid min-height so cards don't collapse on tiny screens */
+    min-height: clamp(130px, 38vw, 180px);
+  }
+  .response-card:active { transform: scale(.97); }
+
+  .card-red   { background: linear-gradient(160deg,#f5e6c8,#eedbb0); border: 2px solid #8b2020; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+  .card-green { background: linear-gradient(160deg,#f0f5e8,#e0ead0); border: 2px solid #2d5a27; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+  .card-blue  { background: linear-gradient(160deg,#e8f0f5,#d0dce8); border: 2px solid #1a3a5c; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+
+  .card-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: clamp(9px, 2.2vw, 11px);
+    font-weight: 700;
+    margin-bottom: 8px;
+    align-self: flex-start;
+    white-space: nowrap;
+  }
+  .badge-red   { background: var(--red);        color: #fff; }
+  .badge-green { background: var(--green-card);  color: #c8e6c9; }
+  .badge-blue  { background: var(--blue-card);   color: #bbdefb; }
+
+  .card-content {
+    font-size: clamp(10px, 2.8vw, 13px);
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.55;
+    flex: 1;
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0,0,0,.1);
+  }
+  .panda-icon { font-size: 1.1rem; }
+  .card-label {
+    font-size: clamp(9px, 2.2vw, 11px);
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .label-red   { background: var(--red); }
+  .label-green { background: var(--green-card); }
+  .label-blue  { background: var(--blue-card); }
+
+  /* ── Action buttons ── */
+  .action-row {
+    display: flex;
+    gap: clamp(8px, 2.5vw, 12px);
+  }
+  .btn-primary {
+    flex: 1;
+    border: 2px solid #8b6914;
+    border-radius: 10px;
+    padding: clamp(12px, 3.5vw, 16px) 8px;
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 3px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.3);
+    background-size: 200% auto;
+    animation: shimmer 3s linear infinite;
+    background-image: linear-gradient(135deg,#c8a030 0%,#e8c050 25%,#f5d060 50%,#e8c050 75%,#c8a030 100%);
+  }
+  .btn-primary:active { transform: scale(.97); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .btn-primary .btn-main {
+    font-size: clamp(14px, 4vw, 18px);
+    font-weight: 900;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .btn-primary .btn-sub {
+    font-size: clamp(10px, 2.5vw, 12px);
+    color: #5a3e10;
+    margin-top: 2px;
+  }
+  .btn-secondary {
+    background: var(--paper-dark);
+    border: 2px solid var(--border-gold);
+    border-radius: 10px;
+    padding: clamp(12px, 3.5vw, 16px) clamp(10px, 3vw, 16px);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 700;
+    color: var(--text-dark);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background .15s;
+    box-shadow: 0 3px 8px rgba(0,0,0,.2);
+  }
+  .btn-secondary:active { background: var(--paper); }
+
+  /* ── Bottom info row – stacks on narrow screens ── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(8px, 2.5vw, 12px);
+  }
+  /* make disclaimer span full width on mobile */
+  .disclaimer-card {
+    grid-column: 1 / -1;
+  }
+
+  /* on wider screens (≥440px) show 3 columns again */
+  @media (min-width: 440px) {
+    .bottom-row { grid-template-columns: 1fr 1fr 1fr; }
+    .disclaimer-card { grid-column: auto; }
+  }
+
+  .info-card {
+    background: var(--paper);
+    border: 2px solid var(--border-gold);
+    border-radius: 8px;
+    padding: clamp(8px, 2.5vw, 12px);
+    font-size: clamp(10px, 2.5vw, 12px);
+  }
+  .tips-card .tips-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 5px;
+    font-size: clamp(11px, 2.8vw, 13px);
+  }
+  .tips-card ol {
+    list-style: decimal;
+    padding-left: 14px;
+    color: var(--text-mid);
+    line-height: 1.9;
+  }
+  .stats-card {
+    text-align: center;
+    background: linear-gradient(135deg,#2a1a0e,#3d2410);
+    border-color: var(--gold);
+  }
+  .stats-title {
+    color: var(--gold-light);
+    font-weight: 700;
+    font-size: clamp(11px, 2.8vw, 13px);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .stats-grid { display: flex; flex-direction: column; gap: 5px; }
+  .stat-item { display: flex; align-items: center; gap: 5px; color: var(--paper); font-size: clamp(10px, 2.5vw, 12px); }
+  .stat-num { font-size: clamp(14px, 4vw, 18px); font-weight: 900; color: var(--gold-light); }
+
+  .disclaimer-card { font-size: clamp(9px, 2.2vw, 11px); line-height: 1.65; color: var(--text-mid); }
+  .disclaimer-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    color: #c0392b;
+    margin-bottom: 5px;
+    font-size: clamp(10px, 2.5vw, 12px);
+  }
+
+  /* ── Animations ── */
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  .burst {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999;
+    font-size: 22px;
+    animation: burstAnim .8s ease forwards;
+  }
+  @keyframes burstAnim {
+    0%   { transform: scale(0) rotate(0deg);   opacity: 1; }
+    100% { transform: scale(3) rotate(360deg); opacity: 0; }
+  }
+</style>
 </head>
 <body>
 
-    <div id="top-panel">
-        <div class="mode-selector">
-            <button class="mode-btn active" onclick="changeMode('老板', '真不好意思，老总打来的紧急电话，我得回一下。你们先吃！')">职场模式</button>
-            <button class="mode-btn" onclick="changeMode('家里老头子', '哎呀，家里打来的，估计有急事，我得回个电话看看，抱歉！')">家庭模式</button>
-            <button class="mode-btn" onclick="changeMode('158-9921-0428', '不好意思，我车好像挡着人家了，我赶紧去处理下，回见！')">挪车/快递</button>
-            <button class="mode-btn" onclick="changeMode('【 紧急呼叫 】', '抱歉，有个预约电话等一天了，我得接一下。')">抽象模式</button>
+<div class="side-banner">过年·社交修罗场</div>
+
+<div class="app">
+
+  <!-- Top nav -->
+  <div class="top-nav">
+    <button class="nav-btn" onclick="alert('牌库功能开发中～')">
+      <span class="icon">📖</span>
+      <span>我的牌库</span>
+    </button>
+    <button class="nav-btn" onclick="alert('设置功能开发中～')">
+      <span class="icon">⚙️</span>
+      <span>设置</span>
+    </button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-chars">
+      <div class="char-img">🧓</div>
+      <div class="header-title">
+        <div class="title-main">
+          <span class="normal">亲戚长辈</span><span class="highlight">防破防</span>
         </div>
-        <div id="script-body">
-            <div>❶ <span class="highlight">皱眉叹气</span> ❷ <span class="highlight">无辜眼神</span> ❸ <span class="highlight">台词撤离</span></div>
-            <div id="current-script" style="margin-top:5px; color:#fff;">“真不好意思，老总打来的紧急电话，我得回一下。你们先吃！”</div>
+        <div class="title-main">
+          <span class="normal">太极拳发牌机</span>
         </div>
+        <div class="title-sub">
+          <span>遇事不慌</span>·<span>随机应变</span>·<span>四两拨千斤</span>
+        </div>
+      </div>
+      <div class="char-img">🧑</div>
+    </div>
+  </div>
+
+  <!-- Attack Cards -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="arrow-deco">→</span>
+        对方打出的"攻击牌"
+        <span class="arrow-deco">←</span>
+      </div>
+      <button class="refresh-btn" onclick="shuffleAttack()">
+        ↻ 换一批
+      </button>
+    </div>
+    <div class="attack-cards" id="attackCards">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <!-- Response Cards -->
+  <div class="response-section">
+    <div class="response-header">
+      <span class="yin-yang">☯</span>
+      <span class="response-title">请抽取你的"太极应对牌"</span>
+      <span class="yin-yang">☯</span>
+    </div>
+    <div class="response-cards" id="responseCards">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="action-row">
+    <button class="btn-primary" onclick="drawCards()">
+      <div class="btn-main">↻ 再抽一组</div>
+      <div class="btn-sub">换一组应对策略</div>
+    </button>
+    <button class="btn-secondary" onclick="saveCards()">
+      ★ 收藏这组牌
+    </button>
+  </div>
+
+  <!-- Bottom info -->
+  <div class="bottom-row">
+    <div class="info-card tips-card">
+      <div class="tips-title">💡 使用小贴士</div>
+      <ol>
+        <li>保持微笑，语气平和</li>
+        <li>见招拆招，灵活应变</li>
+        <li>太极的精髓：以柔克刚</li>
+        <li>保护自己，快乐过年！</li>
+      </ol>
     </div>
 
-    <div id="setup-screen">
-        <button id="start-btn" class="rescue-btn" onclick="startCountdown()">救 我</button>
-        <div id="timer">T-MINUS 60s</div>
+    <div class="info-card stats-card">
+      <div class="stats-title">→ 牌库统计 ←</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span>❤️</span>
+          <span class="stat-num">8</span>
+          <span>类攻击牌</span>
+        </div>
+        <div class="stat-item">
+          <span>⚡</span>
+          <span class="stat-num">24</span>
+          <span>种应对策略</span>
+        </div>
+        <div class="stat-item">
+          <span>🃏</span>
+          <span class="stat-num">72</span>
+          <span>张太极牌</span>
+        </div>
+      </div>
     </div>
 
-    <div id="call-screen" class="full-screen">
-        <div class="caller-info">
-            <h2 class="dynamic-name">老板</h2>
-            <p>移动电话</p>
-        </div>
-        <div class="call-ui-bottom">
-            <div>
-                <div class="btn-circle decline" onclick="reset()">✕</div>
-                <div class="sub-text">拒绝</div>
-            </div>
-            <div>
-                <div class="btn-circle accept" onclick="pickUp()">✓</div>
-                <div class="sub-text">接听</div>
-            </div>
-        </div>
+    <div class="info-card disclaimer-card">
+      <div class="disclaimer-title">⚠️ 免责声明</div>
+      本发牌机仅供娱乐参考，请根据实际情况灵活使用，不建议过度使用"发疯流"，以免引发家庭大战哦！
+      <span style="font-size:16px">🐼</span>
     </div>
+  </div>
 
-    <div id="incall-screen" class="full-screen">
-        <div class="caller-info">
-            <h2 class="dynamic-name" style="font-size: 1.8rem;">老板</h2>
-            <div class="incall-timer" id="call-duration">00:01</div>
-        </div>
-        
-        <div class="incall-grid">
-            <div class="grid-item"><div class="icon-circle">🔇</div><span>静音</span></div>
-            <div class="grid-item"><div class="icon-circle">⌨️</div><span>键盘</span></div>
-            <div class="grid-item"><div class="icon-circle">🔊</div><span>免提</span></div>
-            <div class="grid-item"><div class="icon-circle">➕</div><span>添加通话</span></div>
-            <div class="grid-item"><div class="icon-circle">🎞️</div><span>FaceTime</span></div>
-            <div class="grid-item"><div class="icon-circle">👤</div><span>通讯录</span></div>
-        </div>
+</div>
 
-        <div onclick="reset()">
-            <div class="btn-circle hangup">✕</div>
-        </div>
+<script>
+// 每张攻击牌都有专属的三种流派应对话术
+const attackData = [
+  {
+    icon: '❤️', iconClass: 'icon-red', name: '催婚', desc: '怎么还不找对象啊？年纪不小了吧？',
+    crazy: [
+      '您说得对！我最近看上一个，但彩礼要888万，您能借我不？',
+      '我正在相亲APP上，但系统老给我推荐60岁以上的，您帮我看看咋回事？',
+      '我准备去寺庙修行了，了却红尘，您觉得哪个寺庙最灵？',
+      '其实我已经找好了，就差一套房和一辆车了，您能赞助吗？',
+      '我算过了，再不找的话下辈子还得还债，索性就不找了！',
+    ],
+    blur: [
+      '哎呀缘分这种事急不来～对了您最近血压怎么样了？',
+      '嗯嗯我在努力！诶这桌菜真香，这个是怎么做的？',
+      '哈哈我心里有数！话说您最近身体怎么样，腰还疼吗？',
+      '是是是！哎今年冬天好冷啊，您注意保暖没有？',
+      '我慢慢来～诶外面放烟花了吗？咱们去看看！',
+    ],
+    sincere: [
+      '我自己的事自己有安排，感情宁缺毋滥，您放心好了。',
+      '我也想找，但比起将就，我更想遇到真正合适的人。',
+      '我现在状态挺好的，等感情自然来，急也急不来。',
+      '我对婚姻很认真，正因为认真才不随便，请放心。',
+      '我精力都放在提升自己上，相信好的感情会随之而来。',
+    ],
+  },
+  {
+    icon: '💰', iconClass: 'icon-purple', name: '问收入', desc: '一个月工资多少啊？年终奖有多少？',
+    crazy: [
+      '扣完五险一金到手三千二，您能借我点钱过年吗？',
+      '工资嘛……够还信用卡就行了，您有没有好的副业推荐？',
+      '我最近在研究彩票，如果中了500万请您吃饭！',
+      '我工资是商业机密，说出来会被竞争对手挖走的！',
+      '说出来怕您伤心，总之不多，您能帮我内推一下吗？',
+    ],
+    blur: [
+      '哎呀工资这事说来话长～您退休金现在够花吗？',
+      '还行还行！对了您刚才喝的那个茶是什么牌子，挺香的！',
+      '嗯嗯！诶叔，您最近有没有在做什么养生？看您气色真好！',
+      '呵呵这个嘛……哎今年春晚有个节目挺好看的您看了吗？',
+      '马马虎虎吧～对了隔壁王阿姨的孩子最近去哪儿了？',
+    ],
+    sincere: [
+      '收入是个人隐私，就像我不会问您存款一样，相互尊重哈。',
+      '够用就好，我对自己的生活挺满意的，不用担心。',
+      '我的收入我自己心里有数，目前生活没有压力。',
+      '这个我就不分享了，但我能养活自己，请放心。',
+      '生活质量不只看工资，我综合来看过得还不错。',
+    ],
+  },
+  {
+    icon: '🏢', iconClass: 'icon-blue', name: '买房了吗', desc: '有房有车了吗？什么时候买房？',
+    crazy: [
+      '没有！我准备去农村租块地自己盖，您要不要一起？',
+      '正在看！昨天看了套1000万的，您能借我个首付吗？',
+      '买房？我准备移民去泰国，那边房子便宜多了！',
+      '我算过了租房比买房合算，房贷利息能买好几辆车！',
+      '我已经看好地皮了，准备自建别墅，就差启动资金！',
+    ],
+    blur: [
+      '在规划中！诶您这几年身体还好吧？腿脚利索不？',
+      '嗯嗯努力攒钱！对了这道菜是您做的吗，味道太好了！',
+      '慢慢来吧～话说您孙子现在多大了？开始上学了吗？',
+      '计划中计划中！哎外面有烟花，咱们去阳台看看？',
+      '还在看房！哎叔您当年是怎么买到那么好位置的房？',
+    ],
+    sincere: [
+      '房子在计划中，会按自己的节奏来，不用替我着急。',
+      '买房是大事，我宁可等合适的时机，不想为买而买。',
+      '租房也是一种选择，住得舒心才是最重要的。',
+      '房子的事我们已经有规划了，时机成熟自然会买。',
+      '我有自己的置业计划，请放心，不会委屈自己的。',
+    ],
+  },
+  {
+    icon: '👶', iconClass: 'icon-orange', name: '催生', desc: '结婚了要赶紧要孩子哦！再不生来不及了！',
+    crazy: [
+      '好啊！但养一个孩子到18岁要100万，您赞助吗？',
+      '我们想生，但医生说我太累了，建议我先把身体养好，大概要养3年！',
+      '我已经有孩子了，就是我养的那只猫，您要来看吗？',
+      '我们打算领养一只金毛，您觉得比孩子怎么样？',
+      '好！那您能帮我们带10年吗？签合同那种！',
+    ],
+    blur: [
+      '哈哈顺其自然！哎您孙子现在几岁了，上幼儿园了吗？',
+      '嗯嗯知道了！对了您身体最近怎么样，还在坚持锻炼吗？',
+      '我们有在考虑～话说今年过年有什么好玩的活动吗？',
+      '是是是！哎叔，您年轻时候是怎么带孩子的，聊聊？',
+      '好好好！诶今天这饺子馅是什么，怎么这么好吃！',
+    ],
+    sincere: [
+      '要孩子是我们两个人的决定，我们会在准备好的时候考虑。',
+      '生孩子是大事，我们想在各方面都准备充足再说。',
+      '我们自己的节奏自己把握，谢谢您的关心。',
+      '身体和心理都准备好才是对孩子负责，我们不急。',
+      '这件事我们有认真讨论，有结果会告诉大家的。',
+    ],
+  },
+  {
+    icon: '💼', iconClass: 'icon-teal', name: '贬低工作', desc: '这工作挺轻松的吧？能有多大出息啊？',
+    crazy: [
+      '是挺轻松的！一个月只用加班200小时，羡慕吗？',
+      '没啥出息，所以我准备去摆摊，您觉得卖啥好？',
+      '您说得对，我打算辞职去直播，求您关注！',
+      '确实，所以我在研究怎么炒股，您有内部消息吗？',
+      '对对对，所以我要创业，就差您这个天使投资人了！',
+    ],
+    blur: [
+      '哈哈还行啦！诶叔，您年轻时候做什么工作？聊聊？',
+      '嗯嗯！话说您最近有没有在公园遛弯，运动挺重要的！',
+      '还可以吧～对了今年有没有什么好看的春节档电影啊？',
+      '哎呀说来话长！哎您刚才说的那个地方好玩吗？',
+      '马马虎虎！对了邻居家的小孩考大学了吧，结果怎样？',
+    ],
+    sincere: [
+      '每份工作都有它的价值，我在自己的领域做得很认真。',
+      '出息不只一种定义，我热爱这份工作，这就够了。',
+      '我对自己的职业发展有规划，请相信我的判断。',
+      '我工作认真负责，领导和同事都认可，我很踏实。',
+      '工作好不好要看适不适合自己，我现在很满意。',
+    ],
+  },
+  {
+    icon: '🏆', iconClass: 'icon-purple', name: '比较攀比', desc: '你看你表哥，年薪百万还买了大房子！',
+    crazy: [
+      '表哥这么厉害？那您让他给我介绍个工作吧！',
+      '是吗！我和表哥比谁先秃头，目前我领先！',
+      '哇他好厉害！我们互换一下人生好不好？',
+      '我和他走的不是同一条赛道，我的赛道叫"躺平"！',
+      '表哥那么优秀，让他给我买个房呗，亲戚嘛！',
+    ],
+    blur: [
+      '表哥真棒！对了您最近血糖稳定吗？要注意饮食哦！',
+      '嗯嗯他很努力！诶这道菜您自己做的吗，太香了吧！',
+      '是是是！哎今天这天气不错，饭后要不要去散散步？',
+      '哈哈嗯！对了您最近有没有看什么好看的剧啊？',
+      '我知道了！话说今年过年您们这边有什么习俗啊？',
+    ],
+    sincere: [
+      '每个人的路不一样，不太适合直接比较，我走自己的路。',
+      '我欣赏表哥的努力，我也在用自己的方式前进。',
+      '比较会让人焦虑，我更希望您关注我本身，而不是跟别人的差距。',
+      '我过得充实快乐，这对我来说比什么都重要。',
+      '成功的定义有很多种，我对自己的状态挺满意的。',
+    ],
+  },
+  {
+    icon: '🎓', iconClass: 'icon-blue', name: '学历质疑', desc: '当年要好好读书的，你看现在！',
+    crazy: [
+      '您说得对，我准备去读博，就差学费了，您赞助吗？',
+      '我现在打算考公务员，连考十年，精神可嘉吧！',
+      '学历低有学历低的好处，我可以专心研究如何摸鱼！',
+      '我打算出国留学，哈佛耶鲁随便挑，就是贵了点！',
+      '我已经在自学了，抖音大学，每天学习16小时！',
+    ],
+    blur: [
+      '嗯嗯您说得有道理！哎您当年成绩好吗？讲讲那时候的故事？',
+      '是啊！话说您年轻时候有没有什么遗憾的事？',
+      '哈哈……诶今天这饭菜真丰盛，您做了几道菜啊？',
+      '知道了知道了！对了您孙子孙女现在学习怎么样？',
+      '嗯嗯！诶外面有人放鞭炮了，咱们去看看热闹！',
+    ],
+    sincere: [
+      '学历只是起点，工作后的积累和能力更重要，我一直在进步。',
+      '我对自己走过的路不后悔，每个经历都有它的意义。',
+      '学习是一辈子的事，我现在依然在不断提升自己。',
+      '过去已经过去了，我更关注现在能做什么、未来往哪走。',
+      '学历不代表一切，我用实力证明自己，请拭目以待。',
+    ],
+  },
+  {
+    icon: '👔', iconClass: 'icon-orange', name: '干涉选择', desc: '你这个行业不行啊，赶快换一个！',
+    crazy: [
+      '您说得对！那我去炒股吧，您有没有推荐的股票？',
+      '好的！我准备去卖煎饼果子，您要来我摊子帮忙吗？',
+      '行！我去送外卖，风吹日晒自由自在，多好！',
+      '换什么好呢？我觉得网红不错，您帮我拍视频吧！',
+      '我已经想好了，去寺庙当厨师，斋饭也是大有学问！',
+    ],
+    blur: [
+      '嗯嗯我会考虑的！对了您最近身体怎么样，定期检查了吗？',
+      '是是是！哎叔，您退休之后有没有在做什么副业？',
+      '哈哈我想想！诶今年有没有什么好玩的地方推荐啊？',
+      '知道了！话说这道菜我从来没吃过，这是什么做法？',
+      '嗯嗯！哎外面烟花好美，咱们去阳台看一会儿！',
+    ],
+    sincere: [
+      '我选择这个行业是认真思考过的，我热爱并且擅长它。',
+      '每个行业都有人成功，关键是适合自己，我很清楚自己要什么。',
+      '我对自己的职业选择负责，请相信我有这个判断力。',
+      '感谢您的建议，但这个决定还是让我自己来做吧。',
+      '我在这个行业已经建立了自己的积累，换行成本很高，我会坚持的。',
+    ],
+  },
+];
+
+let currentAttackIndex = 0;
+let displayedAttackIndices = [0, 1, 2, 3, 4]; // which 5 to show
+let savedCards = [];
+let currentResponse = null;
+let usedCrazy = [], usedBlur = [], usedSincere = [];
+
+function getRandom(arr, used) {
+  // Avoid repeat until exhausted
+  let available = arr.filter((_, i) => !used.includes(i));
+  if (available.length === 0) { used.length = 0; available = arr; }
+  const idx = Math.floor(Math.random() * available.length);
+  const item = available[idx];
+  used.push(arr.indexOf(item));
+  return item;
+}
+
+function renderAttackCards() {
+  const container = document.getElementById('attackCards');
+  container.innerHTML = '';
+  displayedAttackIndices.forEach((dataIdx, slotIdx) => {
+    const card = attackData[dataIdx];
+    const div = document.createElement('div');
+    div.className = 'attack-card' + (dataIdx === currentAttackIndex ? ' active' : '');
+    div.innerHTML = `
+      <div class="card-icon ${card.iconClass}">${card.icon}</div>
+      <div class="card-name">${card.name}</div>
+      <div class="card-desc">${card.desc}</div>
+    `;
+    div.onclick = () => {
+      currentAttackIndex = dataIdx;
+      usedCrazy = []; usedBlur = []; usedSincere = [];
+      renderAttackCards();
+      drawCards();
+    };
+    container.appendChild(div);
+  });
+}
+
+function drawCards() {
+  const attack = attackData[currentAttackIndex];
+  const crazy = getRandom(attack.crazy, usedCrazy);
+  const blur = getRandom(attack.blur, usedBlur);
+  const sincere = getRandom(attack.sincere, usedSincere);
+
+  currentResponse = { attack: attack.name, crazy, blur, sincere };
+
+  const container = document.getElementById('responseCards');
+  container.innerHTML = `
+    <div class="response-card card-red" style="opacity:0">
+      <span class="card-type-badge badge-red">🔥 发疯流</span>
+      <div class="card-content">${crazy}</div>
+      <div class="card-footer">
+        <span class="panda-icon">🐼</span>
+        <span class="card-label label-red">直接发疯！</span>
+      </div>
     </div>
+    <div class="response-card card-green" style="opacity:0">
+      <span class="card-type-badge badge-green">⊙ 糊弄流</span>
+      <div class="card-content">${blur}</div>
+      <div class="card-footer">
+        <span class="panda-icon">🐼</span>
+        <span class="card-label label-green">岔开话题！</span>
+      </div>
+    </div>
+    <div class="response-card card-blue" style="opacity:0">
+      <span class="card-type-badge badge-blue">🛡 真诚反击流</span>
+      <div class="card-content">${sincere}</div>
+      <div class="card-footer">
+        <span class="panda-icon">🐼</span>
+        <span class="card-label label-blue">真诚反击！</span>
+      </div>
+    </div>
+  `;
 
-    <audio id="ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
-    <audio id="hello-voice" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
+  setTimeout(() => {
+    const cards = container.querySelectorAll('.response-card');
+    cards.forEach((c, i) => {
+      setTimeout(() => {
+        c.style.transition = 'opacity 0.3s, transform 0.3s';
+        c.style.opacity = '1';
+        c.style.transform = 'translateY(0)';
+      }, i * 120);
+      c.style.transform = 'translateY(16px)';
+    });
+  }, 10);
 
-    <script>
-        let durationTimer;
-        const ringtone = document.getElementById('ringtone');
-        const helloVoice = document.getElementById('hello-voice');
-        const callScreen = document.getElementById('call-screen');
-        const incallScreen = document.getElementById('incall-screen');
-        const timerText = document.getElementById('timer');
-        const currentScript = document.getElementById('current-script');
+  burst();
+}
 
-        // 解锁音频权限
-        document.body.addEventListener('click', () => {
-            ringtone.load();
-            helloVoice.load();
-        }, { once: true });
+function burst() {
+  const emojis = ['✨', '🎉', '🎊', '💫', '⭐'];
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'burst';
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      el.style.left = (30 + Math.random() * 40) + '%';
+      el.style.top = (40 + Math.random() * 20) + '%';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 900);
+    }, i * 100);
+  }
+}
 
-        function changeMode(name, script) {
-            document.querySelectorAll('.dynamic-name').forEach(el => el.innerText = name);
-            currentScript.innerText = `“${script}”`;
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.innerText.includes(name.substring(0,2)) || (name.includes('-') && btn.innerText.includes('挪车'))) btn.classList.add('active');
-            });
-        }
+function shuffleAttack() {
+  // Shift display window, cycling through all 8 attack cards
+  const first = displayedAttackIndices.shift();
+  const next = (displayedAttackIndices[displayedAttackIndices.length - 1] + 1) % attackData.length;
+  displayedAttackIndices.push(next);
+  // If current selected is no longer visible, pick first displayed
+  if (!displayedAttackIndices.includes(currentAttackIndex)) {
+    currentAttackIndex = displayedAttackIndices[0];
+  }
+  usedCrazy = []; usedBlur = []; usedSincere = [];
+  renderAttackCards();
+  drawCards();
+}
 
-        function startCountdown() {
-            let timeLeft = 60;
-            document.getElementById('start-btn').disabled = true;
-            const countdown = setInterval(() => {
-                timeLeft--;
-                timerText.innerText = `准备中：${timeLeft}s`;
-                if (timeLeft <= 0) {
-                    clearInterval(countdown);
-                    triggerCall();
-                }
-            }, 1000);
-        }
+function saveCards() {
+  if (currentResponse) {
+    savedCards.push(currentResponse);
+    alert(`✅ 已收藏「${currentResponse.attack}」这组牌！\n当前共收藏 ${savedCards.length} 组`);
+  }
+}
 
-        function triggerCall() {
-            ringtone.play().catch(() => {});
-            callScreen.style.display = 'flex';
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        }
-
-        function pickUp() {
-            ringtone.pause();
-            callScreen.style.display = 'none';
-            incallScreen.style.display = 'flex'; 
-            
-            // 播放灵魂“喂”
-            setTimeout(() => { helloVoice.play().catch(() => {}); }, 700);
-
-            // 开启 iPhone 风格计时器
-            let sec = 0;
-            durationTimer = setInterval(() => {
-                sec++;
-                let m = Math.floor(sec/60).toString().padStart(2, '0');
-                let s = (sec%60).toString().padStart(2, '0');
-                document.getElementById('call-duration').innerText = `${m}:${s}`;
-            }, 1000);
-
-            // 10秒后自动彻底隐藏（模拟你已经挂电话放兜里了）
-            setTimeout(() => { reset(); }, 10000);
-        }
-
-        function reset() {
-            clearInterval(durationTimer);
-            ringtone.pause();
-            helloVoice.pause();
-            callScreen.style.display = 'none';
-            incallScreen.style.display = 'none';
-            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-            timerText.innerText = "已就绪";
-            document.getElementById('start-btn').disabled = false;
-        }
-    </script>
+// Init
+renderAttackCards();
+drawCards();
+</script>
 </body>
 </html>
